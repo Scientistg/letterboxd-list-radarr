@@ -2,7 +2,6 @@ import pLimit from "p-limit";
 import { getKanpai, getFirstMatch, LETTERBOXD_ORIGIN } from "./util";
 import * as cache from "../cache/index";
 import { logger } from "../logger";
-import { LetterboxdPoster } from "./list";
 
 const moviesLogger = logger.child({ module: "MoviesDetails" });
 
@@ -15,12 +14,10 @@ export interface LetterboxdMovieDetails {
     published: string;
     imdb: string;
     tmdb?: string;
-    addedAt?: string;
 }
 
 export const getMoviesDetailCached = async (
     slugs: string[],
-    posters?: LetterboxdPoster[],
     concurrencyLimit: number = 7,
     onDetail?: (movie: LetterboxdMovieDetails) => void,
     shouldCancel?: () => boolean
@@ -37,7 +34,7 @@ export const getMoviesDetailCached = async (
                 }
 
                 try {
-                    return await getCachedMovieDetail(slug,posters);
+                    return await getCachedMovieDetail(slug);
                 } catch (e: any) {
                     moviesLogger.error(`Error fetching '${slug}'.`);
                 }
@@ -52,7 +49,7 @@ export const getMoviesDetailCached = async (
     return movies.filter((movie): movie is LetterboxdMovieDetails => !!movie);
 };
 
-export const getMovieDetail = async (slug: string, posters?: LetterboxdPoster[]) => {
+export const getMovieDetail = async (slug: string) => {
     const details = await getKanpai<LetterboxdMovieDetails>(
         `${LETTERBOXD_ORIGIN}${slug}`,
         {
@@ -70,33 +67,18 @@ export const getMovieDetail = async (slug: string, posters?: LetterboxdPoster[])
             ],
         }
     );
-    moviesLogger.debug(`getMovieDetail RUN`);
-    // Find the poster with the matching slug
-    if(posters){
-        const poster = posters.find((poster) => poster.slug === slug);
-        if (poster) {
-            details.addedAt = poster.addedAt;  // Set the added date from poster
-            moviesLogger.debug(`Date from posters ${poster.addedAt}`);
-        }
-        else {
-            moviesLogger.debug(`No matching poster found for slug ${slug}`);
-        }
-    } else
-    {
-        moviesLogger.debug(`No posters given`);
-    }
 
     details.slug = slug;
     return details;
 };
 
-export const getCachedMovieDetail = async (slug: string, posters?:LetterboxdPoster[]) => {
+export const getCachedMovieDetail = async (slug: string) => {
     if (await cache.has(slug)) {
         moviesLogger.debug(`Fetched '${slug}' from redis.`);
         return await cache.get<LetterboxdMovieDetails>(slug);
     }
 
-    const data = await getMovieDetail(slug,posters);
+    const data = await getMovieDetail(slug);
     moviesLogger.debug(`Fetched '${slug}' live.`);
 
     // We cache movies indefinitely, assuming they don't change.

@@ -2,11 +2,12 @@
 version: "3.8"
 services:
     web:
+        image: letterboxd-list-radarr:1.0
         # image: screeny05/letterboxd-list-radarr:latest
         # image: node:15.3.0-alpine3.10
-        build:
-            context: .
-            dockerfile: Dockerfile  # optional if named 'Dockerfile'
+        # build:
+        #     context: .
+        #     dockerfile: Dockerfile  # optional if named 'Dockerfile'
         ports:
             - 5543:5543
         # working_dir: /home/node/app

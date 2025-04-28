@@ -75,19 +75,22 @@ app.get(/(.*)/, async (req, res) => {
     }
 
     const movieSlugs = posters.map((poster) => poster.slug);
-    appLogger.debug(`poster zero: ${posters[0].addedAt}`);
-    // Collect transformed movies first
-    const transformedMovies: any[] = [];
 
-    const onMovie = (movie: LetterboxdMovieDetails) => {
-        if (!movie.tmdb) return;
-        transformedMovies.push(movie);
+    let transformedMovies: any[] = [];
+    
+    const onMovie = async (movie: LetterboxdMovieDetails) => {
+        // If there's no tmdb-id it may be a tv-show
+        // radarr throws an error, if an entry is missing an id
+        if (!movie.tmdb) {
+            return;
+        }
+        transformedMovies.push(movie)
+        return; 
     };
 
     try {
         await getMoviesDetailCached(
             movieSlugs,
-            posters,
             7,
             onMovie,
             () => !isConnectionOpen
@@ -98,24 +101,9 @@ app.get(/(.*)/, async (req, res) => {
         isConnectionOpen = false;
         return;
     }
-
-    appLogger.info(`Fetched ${transformedMovies.length} transformed movies.`);
-
-    const sortParam = req.query.sort;
     const reverseParam = req.query.reverse?.toLowerCase() === "true";
     maxResults = req.query.max ? Number.parseInt(req.query.max) : 0;
-    appLogger.info(`Max results: ${maxResults}`);
-
-    if (sortParam === "added") {
-        transformedMovies.sort((a, b) => {
-            if (!a.addedAt || !b.addedAt){ 
-                appLogger.debug(`No added date found`);
-                return 0;
-            }
-            const diff = new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime();
-            return reverseParam ? -diff : diff;
-        });
-    }
+    transformedMovies = reverseParam ? transformedMovies.reverse() : transformedMovies;
     // Now run getFilteredMovie on the collected list
     for (const movie of transformedMovies) {
         if (maxResults > 0 && movieCount >= maxResults) {
