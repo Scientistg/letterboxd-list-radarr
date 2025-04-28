@@ -61,18 +61,7 @@ app.get(/(.*)/, async (req, res) => {
             throw new Error(`Fetching posters failed for ${slug}`);
         }
 
-        const sortParam = req.query.sort;
-        const reverseParam = req.query.reverse?.toLowerCase() === "true";
-        maxResults = req.query.max ? Number.parseInt(req.query.max) : 0;
-        appLogger.info(`Max results: ${maxResults}`);
-
-        if (sortParam === "added") {
-            posters.sort((a, b) => {
-                if (!a.addedAt || !b.addedAt) return 0;
-                const diff = new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime();
-                return reverseParam ? -diff : diff;
-            });
-        }
+        
 
         if (limit) {
             posters = posters.slice(0, limit);
@@ -86,19 +75,19 @@ app.get(/(.*)/, async (req, res) => {
     }
 
     const movieSlugs = posters.map((poster) => poster.slug);
-
+    appLogger.debug(`poster zero: ${posters[0].addedAt}`);
     // Collect transformed movies first
     const transformedMovies: any[] = [];
 
     const onMovie = (movie: LetterboxdMovieDetails) => {
         if (!movie.tmdb) return;
-        const transformed = transformLetterboxdMovieToRadarr(movie);
-        transformedMovies.push(transformed);
+        transformedMovies.push(movie);
     };
 
     try {
         await getMoviesDetailCached(
             movieSlugs,
+            posters,
             7,
             onMovie,
             () => !isConnectionOpen
@@ -112,6 +101,21 @@ app.get(/(.*)/, async (req, res) => {
 
     appLogger.info(`Fetched ${transformedMovies.length} transformed movies.`);
 
+    const sortParam = req.query.sort;
+    const reverseParam = req.query.reverse?.toLowerCase() === "true";
+    maxResults = req.query.max ? Number.parseInt(req.query.max) : 0;
+    appLogger.info(`Max results: ${maxResults}`);
+
+    if (sortParam === "added") {
+        transformedMovies.sort((a, b) => {
+            if (!a.addedAt || !b.addedAt){ 
+                appLogger.debug(`No added date found`);
+                return 0;
+            }
+            const diff = new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime();
+            return reverseParam ? -diff : diff;
+        });
+    }
     // Now run getFilteredMovie on the collected list
     for (const movie of transformedMovies) {
         if (maxResults > 0 && movieCount >= maxResults) {
@@ -120,7 +124,7 @@ app.get(/(.*)/, async (req, res) => {
         }
 
         try {
-            const OutMovie = await getFilteredMovie(movie);
+            const OutMovie = await getFilteredMovie(transformLetterboxdMovieToRadarr(movie));
             if (OutMovie) {
                 chunk.push(OutMovie);
                 movieCount++;
