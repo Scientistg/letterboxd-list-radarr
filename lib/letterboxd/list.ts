@@ -12,6 +12,7 @@ const LIST_CACHE_TIMEOUT = 30 * 60;
 export interface LetterboxdPoster {
     slug: string;
     title: string;
+    addedAt: string;
 }
 
 interface LetterboxdListPage {
@@ -71,6 +72,7 @@ export const getListPaginated = async (
                 {
                     slug: ["$", "[data-target-link]"],
                     title: [".image", "[alt]"],
+                    addedAt: ["$", "[data-added]"],
                 },
             ],
         }

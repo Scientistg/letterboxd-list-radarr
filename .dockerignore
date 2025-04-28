@@ -1,3 +1,8 @@
 node_modules
 dist
 redis-data
+*.log
+.git
+.gitignore
+Dockerfile
+docker-compose.yml

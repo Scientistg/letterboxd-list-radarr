@@ -14,6 +14,7 @@ export interface LetterboxdMovieDetails {
     published: string;
     imdb: string;
     tmdb?: string;
+    added?: string;
 }
 
 export const getMoviesDetailCached = async (
@@ -67,6 +68,14 @@ export const getMovieDetail = async (slug: string) => {
             ],
         }
     );
+    // Find the poster with the matching slug
+    const poster = posters.find((poster) => poster.slug === slug);
+    if (poster) {
+        const addedDateStr = poster.addedAt;  // `addedAt` comes from `LetterboxdPoster`
+        const added = addedDateStr ? new Date(addedDateStr) : undefined;
+        details.added = added;  // Set the added date from poster
+    }
+
     details.slug = slug;
     return details;
 };
