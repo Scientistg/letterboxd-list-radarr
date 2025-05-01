@@ -1,9 +1,11 @@
 import 'dotenv/config';
 import axios from 'axios';
+import * as fs from 'fs';
 import { RadarrMovieDetails } from './types';
 import { logger } from "../logger";
 
-const TMDB_API_KEY = process.env.TMDB_API_KEY!;
+const fileContent: string = fs.readFileSync(process.env.TMDB_API_KEY_FILE!, 'utf8');
+const TMDB_API_KEY = fileContent ? fileContent : process.env.TMDB_API_KEY!;
 const COUNTRY = process.env.COUNTRY!;
 const STREAMING_SERVICES = process.env.STREAMING_SERVICES!.split(',').map(s => s.trim().toLowerCase());
 
